@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import CerebrasStudioSimple from '../components/CerebrasStudioSimple';
+import CerebrasStudio from '../components/CerebrasStudio';
 
 export const metadata: Metadata = {
   title: 'Cerebras Studio - Ultra-Fast AI Creative Platform',
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      <CerebrasStudioSimple />
+      <CerebrasStudio />
     </main>
   );
 }
