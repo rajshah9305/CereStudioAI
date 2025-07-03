@@ -6,41 +6,16 @@ import toast from 'react-hot-toast';
 import { 
   Sparkles, Code, FileText, PenTool, Settings, Download, 
   Copy, Check, Moon, Sun, Github, Twitter, Zap, Brain,
-  Send, StopCircle, Upload
+  Send, StopCircle
 } from 'lucide-react';
 
-interface Model {
-  id: string;
-  name: string;
-  description: string;
-  speed?: string;
-}
-
-interface Tab {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
-}
-
 const CerebrasStudio: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('text');
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
-  const [selectedModel, setSelectedModel] = useState<string>('llama3.1-8b');
-  const [copied, setCopied] = useState<boolean>(false);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [mounted, setMounted] = useState<boolean>(false);
-
-  // Ensure component is mounted before hydration
-  useEffect(() => {
-    setMounted(true);
-    // Load API key from localStorage
-    const savedApiKey = localStorage.getItem('cerebras-api-key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
+  const [activeTab, setActiveTab] = useState('text');
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [selectedModel, setSelectedModel] = useState('llama-4-scout-17b-16e-instruct');
+  const [copied, setCopied] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
 
   const {
     messages,
@@ -51,86 +26,38 @@ const CerebrasStudio: React.FC = () => {
     stop,
   } = useChat({
     api: '/api/generate',
-    body: { 
-      model: selectedModel,
-      apiKey: apiKey 
-    },
-    onError: (error) => {
-      toast.error(error.message || 'An error occurred while generating content');
-    },
-    onFinish: () => {
-      toast.success('Content generated successfully!');
-    },
+    body: { model: selectedModel },
+    onError: (error) => toast.error(error.message),
+    onFinish: () => toast.success('Content generated successfully!'),
   });
 
-  const models: Model[] = [
-    { 
-      id: 'llama3.1-8b', 
-      name: 'Llama 3.1 8B', 
-      description: 'Fast and efficient',
-      speed: '1800 tokens/sec'
-    },
-    { 
-      id: 'llama3.1-70b', 
-      name: 'Llama 3.1 70B', 
-      description: 'Most powerful model',
-      speed: '450 tokens/sec'
-    },
+  const models = [
+    { id: 'llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B', description: 'Latest reasoning model' },
+    { id: 'llama-3.3-70b', name: 'Llama 3.3 70B', description: 'Most powerful model' },
+    { id: 'llama3.1-8b', name: 'Llama 3.1 8B', description: 'Fast and efficient' },
   ];
 
-  const tabs: Tab[] = [
+  const tabs = [
     { id: 'text', label: 'Text Studio', icon: PenTool, description: 'Creative writing & content generation' },
     { id: 'code', label: 'Code Generator', icon: Code, description: 'Programming assistance' },
     { id: 'document', label: 'Document AI', icon: FileText, description: 'Document analysis' },
   ];
 
-  const handleApiKeyChange = (newApiKey: string) => {
-    setApiKey(newApiKey);
-    localStorage.setItem('cerebras-api-key', newApiKey);
-  };
-
-  const copyToClipboard = async () => {
+  const copyToClipboard = () => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage?.content) {
-      try {
-        await navigator.clipboard.writeText(lastMessage.content);
-        setCopied(true);
-        toast.success('Copied to clipboard!');
-        setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        toast.error('Failed to copy to clipboard');
-      }
+      navigator.clipboard.writeText(lastMessage.content);
+      setCopied(true);
+      toast.success('Copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) {
-      toast.error('Please enter a prompt');
-      return;
-    }
-    
-    if (!apiKey) {
-      toast.error('Please enter your Cerebras API key in settings');
-      setShowSettings(true);
-      return;
-    }
-
+    if (!input.trim()) return;
     handleSubmit(e);
   };
-
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-white mb-2">Loading Cerebras Studio</h2>
-          <p className="text-gray-400">Initializing ultra-fast AI inference...</p>
-        </div>
-      </div>
-    );
-  }
 
   const lastMessage = messages[messages.length - 1];
   const hasResponse = lastMessage?.role === 'assistant';
@@ -153,9 +80,7 @@ const CerebrasStudio: React.FC = () => {
                   <Brain className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                    Cerebras Studio
-                  </h1>
+                  <h1 className="text-2xl font-bold gradient-text">Cerebras Studio</h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400">AI-Powered Creative Platform</p>
                 </div>
               </div>
@@ -165,14 +90,12 @@ const CerebrasStudio: React.FC = () => {
               <button
                 onClick={() => setIsDarkMode(!isDarkMode)}
                 className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Toggle theme"
               >
                 {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
               <button
                 onClick={() => setShowSettings(!showSettings)}
                 className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Settings"
               >
                 <Settings className="h-5 w-5" />
               </button>
@@ -188,47 +111,25 @@ const CerebrasStudio: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Settings</h2>
-                <button 
-                  onClick={() => setShowSettings(false)} 
-                  className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded p-1"
-                  aria-label="Close settings"
-                >
-                  ×
-                </button>
+                <button onClick={() => setShowSettings(false)} className="text-2xl">×</button>
               </div>
               
               <div className="space-y-6">
                 <div>
-                  <label htmlFor="api-key" className="block text-sm font-medium mb-2">
-                    Cerebras API Key
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Cerebras API Key</label>
                   <input
-                    id="api-key"
                     type="password"
                     value={apiKey}
-                    onChange={(e) => handleApiKeyChange(e.target.value)}
+                    onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Enter your Cerebras API key"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-800"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Get your free API key from{' '}
-                    <a 
-                      href="https://cerebras.ai" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-500"
-                    >
-                      cerebras.ai
-                    </a>
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Get your free API key from cerebras.ai</p>
                 </div>
 
                 <div>
-                  <label htmlFor="model-select" className="block text-sm font-medium mb-2">
-                    Model Selection
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Model Selection</label>
                   <select
-                    id="model-select"
                     value={selectedModel}
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-800"
@@ -239,24 +140,6 @@ const CerebrasStudio: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                  <h3 className="font-medium text-purple-900 dark:text-purple-100 mb-2">Performance Stats</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Speed:</span>
-                      <span className="font-medium">Up to 1,800 tokens/sec</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Context:</span>
-                      <span className="font-medium">128K tokens</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Accuracy:</span>
-                      <span className="font-medium">16-bit precision</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -303,8 +186,8 @@ const CerebrasStudio: React.FC = () => {
               <textarea
                 value={input}
                 onChange={handleInputChange}
-                placeholder={`What would you like to ${activeTab === 'code' ? 'build' : 'create'} today?`}
-                className="w-full h-64 p-4 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 resize-none bg-gray-50 dark:bg-gray-900 transition-all duration-200"
+                placeholder="What would you like to create today?"
+                className="w-full h-64 p-4 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 resize-none bg-gray-50 dark:bg-gray-900"
                 disabled={isLoading}
               />
               
@@ -312,7 +195,7 @@ const CerebrasStudio: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-purple-500/25"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 transition-all duration-300"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center space-x-2">
@@ -332,20 +215,10 @@ const CerebrasStudio: React.FC = () => {
                     type="button"
                     onClick={stop}
                     className="px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors"
-                    aria-label="Stop generation"
                   >
                     <StopCircle className="h-4 w-4" />
                   </button>
                 )}
-                
-                <button 
-                  type="button"
-                  className="px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors"
-                  disabled={isLoading}
-                  aria-label="Upload file"
-                >
-                  <Upload className="h-4 w-4" />
-                </button>
               </div>
             </form>
           </div>
@@ -360,7 +233,6 @@ const CerebrasStudio: React.FC = () => {
                     <button
                       onClick={copyToClipboard}
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      aria-label="Copy to clipboard"
                     >
                       {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </button>
@@ -379,7 +251,7 @@ const CerebrasStudio: React.FC = () => {
                           ? 'bg-blue-50 dark:bg-blue-900/20' 
                           : 'bg-purple-50 dark:bg-purple-900/20'
                       }`}>
-                        <pre className="whitespace-pre-wrap text-sm font-mono">
+                        <pre className="whitespace-pre-wrap text-sm">
                           {message.content}
                           {isLoading && index === messages.length - 1 && (
                             <span className="inline-block w-2 h-5 bg-purple-500 animate-pulse ml-1"></span>
@@ -389,7 +261,7 @@ const CerebrasStudio: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                     <Sparkles className="h-12 w-12 mb-4 opacity-50" />
                     <p className="text-center">Your AI-generated content will appear here</p>
                     <p className="text-sm text-center mt-2">Experience lightning-fast inference with Cerebras</p>
@@ -399,74 +271,7 @@ const CerebrasStudio: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Performance Stats */}
-        <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Performance Metrics</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">1,800</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Tokens/Second</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">128K</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Context Length</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">16-bit</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Precision</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl">
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">20x</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Faster than GPUs</div>
-            </div>
-          </div>
-        </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 mt-16">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              <div className="flex items-center space-x-2">
-                <Brain className="h-5 w-5 text-purple-500" />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Powered by Cerebras Inference - The world's fastest AI
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <a 
-                href="https://www.cerebras.ai" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-purple-500 transition-colors"
-              >
-                Learn more about Cerebras
-              </a>
-              <a 
-                href="https://github.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="GitHub"
-              >
-                <Github className="h-5 w-5" />
-              </a>
-              <a 
-                href="https://twitter.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

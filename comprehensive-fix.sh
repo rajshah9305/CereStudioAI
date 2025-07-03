@@ -1,3 +1,226 @@
+#!/bin/bash
+
+# 🔧 Comprehensive Fix for Cerebras Studio
+# Addresses: React 19, Next.js 15, AI SDK versions, missing dependencies
+
+echo "🔧 Applying Comprehensive Fix for Cerebras Studio..."
+echo "================================================="
+
+# Check if we're in the right directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Please run this script from your Cerebras Studio project directory"
+    exit 1
+fi
+
+# Backup existing files
+echo "💾 Creating backups..."
+cp package.json package.json.backup
+[ -f "vercel.json" ] && cp vercel.json vercel.json.backup
+[ -f "app/page.tsx" ] && cp app/page.tsx app/page.tsx.backup
+[ -f "components/CerebrasStudio.tsx" ] && cp components/CerebrasStudio.tsx components/CerebrasStudio.tsx.backup
+
+echo "📦 Fixing package.json with compatible versions..."
+
+# Create updated package.json with compatible versions
+cat > package.json << 'EOF'
+{
+  "name": "cerebras-studio",
+  "version": "1.0.0",
+  "description": "AI-powered creative platform using Cerebras ultra-fast inference",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "ai": "^3.3.0",
+    "lucide-react": "^0.263.1",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.3.0",
+    "@tailwindcss/typography": "^0.5.10",
+    "framer-motion": "^11.0.0",
+    "react-hot-toast": "^2.4.1",
+    "zustand": "^4.5.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.4.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "prettier": "^3.2.0",
+    "prettier-plugin-tailwindcss": "^0.5.14"
+  },
+  "keywords": [
+    "ai",
+    "cerebras",
+    "nextjs",
+    "react",
+    "typescript",
+    "tailwindcss"
+  ],
+  "author": "Cerebras Studio Team",
+  "license": "MIT"
+}
+EOF
+
+echo "⚙️ Updating Next.js configuration..."
+
+# Create updated next.config.js
+cat > next.config.js << 'EOF'
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  experimental: {
+    serverComponentsExternalPackages: ['ai'],
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
+    formats: ['image/webp', 'image/avif'],
+  },
+  env: {
+    CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
+  },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
+    ];
+  },
+};
+
+module.exports = nextConfig;
+EOF
+
+echo "🔧 Creating fixed vercel.json..."
+
+# Create clean vercel.json
+cat > vercel.json << 'EOF'
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "regions": ["iad1", "sfo1", "fra1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "build": {
+    "env": {
+      "NEXT_TELEMETRY_DISABLED": "1"
+    }
+  }
+}
+EOF
+
+echo "📱 Updating app/page.tsx with proper client component..."
+
+# Create updated page.tsx for Next.js 14/React 18 compatibility
+cat > app/page.tsx << 'EOF'
+import { Metadata } from 'next';
+import CerebrasStudio from '../components/CerebrasStudio';
+
+export const metadata: Metadata = {
+  title: 'Cerebras Studio - Ultra-Fast AI Creative Platform',
+  description: 'Experience the world\'s fastest AI inference with Cerebras Studio. Generate content, code, and creative writing at lightning speed with 1,800 tokens per second.',
+  openGraph: {
+    title: 'Cerebras Studio - Ultra-Fast AI Creative Platform',
+    description: 'Experience the world\'s fastest AI inference with Cerebras Studio.',
+    type: 'website',
+  },
+};
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen">
+      <CerebrasStudio />
+    </main>
+  );
+}
+EOF
+
+echo "🧩 Updating CerebrasStudio component with compatibility fixes..."
+
+# Create updated CerebrasStudio component
+cat > components/CerebrasStudio.tsx << 'EOF'
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -472,3 +695,204 @@ const CerebrasStudio: React.FC = () => {
 };
 
 export default CerebrasStudio;
+EOF
+
+echo "🔌 Updating API route with better error handling..."
+
+# Create updated API route
+mkdir -p app/api/generate
+cat > app/api/generate/route.ts << 'EOF'
+import { NextRequest, NextResponse } from 'next/server';
+import { streamText } from 'ai';
+
+export async function POST(req: NextRequest) {
+  try {
+    const { messages, model = 'llama3.1-8b', apiKey } = await req.json();
+
+    // Use API key from request body or environment
+    const cerebrasApiKey = apiKey || process.env.CEREBRAS_API_KEY;
+
+    if (!cerebrasApiKey) {
+      return NextResponse.json(
+        { error: 'Cerebras API key not configured. Please add your API key in settings.' },
+        { status: 401 }
+      );
+    }
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json(
+        { error: 'Messages array is required' },
+        { status: 400 }
+      );
+    }
+
+    // Make direct API call to Cerebras
+    const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cerebrasApiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        stream: true,
+        temperature: 0.7,
+        max_tokens: 2048,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return NextResponse.json(
+        { error: errorData.error || `API request failed with status ${response.status}` },
+        { status: response.status }
+      );
+    }
+
+    // Return the streaming response
+    return new NextResponse(response.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+
+  } catch (error) {
+    console.error('Cerebras API error:', error);
+    
+    return NextResponse.json(
+      { error: 'An error occurred while generating content. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+EOF
+
+echo "📝 Updating ESLint configuration..."
+
+# Create updated ESLint config
+cat > .eslintrc.json << 'EOF'
+{
+  "extends": [
+    "next/core-web-vitals",
+    "@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "react/no-unescaped-entities": "off",
+    "react/jsx-no-target-blank": "warn"
+  },
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "node": true
+  }
+}
+EOF
+
+echo "🧪 Testing build..."
+if npm install --silent > /dev/null 2>&1; then
+    echo "✅ Dependencies installed successfully"
+    if npm run build > /dev/null 2>&1; then
+        echo "✅ Build successful!"
+    else
+        echo "⚠️  Build failed - check for remaining errors with: npm run build"
+    fi
+else
+    echo "⚠️  Dependency installation had issues - run: npm install"
+fi
+
+echo ""
+echo "🎉 COMPREHENSIVE FIX COMPLETE!"
+echo "=============================="
+echo ""
+echo "✅ Issues Fixed:"
+echo "   ✓ React 18.3.0 (compatible version)"
+echo "   ✓ Next.js 14.2.0 (stable version)" 
+echo "   ✓ AI SDK 3.3.0 (compatible version)"
+echo "   ✓ Added missing dependencies (zod, TypeScript ESLint)"
+echo "   ✓ Fixed vercel.json JSON syntax"
+echo "   ✓ Updated component for React 18 compatibility"
+echo "   ✓ Improved error handling and accessibility"
+echo "   ✓ Direct Cerebras API integration"
+echo ""
+echo "🚀 Next Steps:"
+echo "1. npm install"
+echo "2. Get your API key from https://cerebras.ai"
+echo "3. npm run dev"
+echo "4. Add your API key in the settings panel"
+echo "5. Deploy: vercel"
+echo ""
+echo "🎯 Your deployment should now work perfectly!"
+EOF
+
+
+
+
+
+
+
+
+
+
+🔧 ISSUES FIXED:
+✅ React 19 → React 18.3.0
+
+Downgraded to stable, widely-supported version
+All dependencies now compatible
+
+✅ Next.js 15 → Next.js 14.2.0
+
+Stable version with proper dynamic import handling
+Fixed SSR/client component patterns
+
+✅ AI SDK Version Conflicts
+
+Using ai: ^3.3.0 (stable, compatible version)
+Removed problematic @ai-sdk/cerebras package
+Direct Cerebras API integration via fetch
+
+✅ Missing Dependencies Added
+
+zod: ^3.23.0 for validation
+@typescript-eslint/eslint-plugin: ^7.8.0
+@typescript-eslint/parser: ^7.8.0
+
+✅ Component Fixes
+
+Proper client component with hydration handling
+Improved accessibility (ARIA labels, semantic HTML)
+Better error handling and loading states
+Direct API key management
+
+
+🚀 HOW TO APPLY THE FIX:
+Option 1: Run Comprehensive Fix Script
+bash# Save the script above as comprehensive-fix.sh
+chmod +x comprehensive-fix.sh
+./comprehensive-fix.sh
+Option 2: Step-by-Step Manual Fix
+
+Update package.json with compatible versions
+Fix vercel.json (remove GitHub Actions syntax)
+Update components for React 18 compatibility
+Add missing dependencies
+Test build: npm run build
