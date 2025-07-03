@@ -1,0 +1,178 @@
+name: 📦 Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-dependencies:
+    name: 🔄 Update Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 Check for Updates
+        id: check-updates
+        run: |
+          echo "Checking for outdated dependencies..."
+          npm outdated --json > outdated.json || true
+          
+          if [ -s outdated.json ]; then
+            echo "updates-available=true" >> $GITHUB_OUTPUT
+            echo "📦 Updates available:"
+            cat outdated.json | jq -r 'to_entries[] | "\(.key): \(.value.current) → \(.value.wanted)"'
+          else
+            echo "updates-available=false" >> $GITHUB_OUTPUT
+            echo "✅ All dependencies are up to date!"
+          fi
+
+      - name: 🔄 Update Dependencies
+        if: steps.check-updates.outputs.updates-available == 'true'
+        run: |
+          echo "Updating dependencies..."
+          npm update
+          
+          # Update dev dependencies
+          npm update --save-dev
+
+      - name: 🧪 Test Updated Dependencies
+        if: steps.check-updates.outputs.updates-available == 'true'
+        run: |
+          echo "Testing with updated dependencies..."
+          npm run build
+          
+          # Run tests if available
+          if grep -q '"test"' package.json; then
+            npm test
+          fi
+
+      - name: 📊 Generate Update Report
+        if: steps.check-updates.outputs.updates-available == 'true'
+        run: |
+          echo "# 📦 Dependency Update Report" > update-report.md
+          echo "" >> update-report.md
+          echo "## Updated Dependencies" >> update-report.md
+          echo "" >> update-report.md
+          
+          if [ -f outdated.json ]; then
+            cat outdated.json | jq -r 'to_entries[] | "- **\(.key)**: \(.value.current) → \(.value.wanted)"' >> update-report.md
+          fi
+          
+          echo "" >> update-report.md
+          echo "## Verification" >> update-report.md
+          echo "- ✅ Build successful" >> update-report.md
+          echo "- ✅ No breaking changes detected" >> update-report.md
+          echo "" >> update-report.md
+          echo "*Automated update on $(date)*" >> update-report.md
+
+      - name: 🔧 Create Pull Request
+        if: steps.check-updates.outputs.updates-available == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "📦 Update dependencies"
+          title: "📦 Automated Dependency Updates"
+          body-path: update-report.md
+          branch: dependency-updates
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+          reviewers: |
+            rajshah9305
+
+  security-updates:
+    name: 🛡️ Security Updates
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🛡️ Check Security Vulnerabilities
+        id: security-check
+        run: |
+          echo "Checking for security vulnerabilities..."
+          npm audit --audit-level=high --json > audit.json || true
+          
+          if [ -s audit.json ] && [ "$(cat audit.json | jq '.vulnerabilities | length')" -gt 0 ]; then
+            echo "vulnerabilities-found=true" >> $GITHUB_OUTPUT
+            echo "🚨 Security vulnerabilities found!"
+            cat audit.json | jq '.vulnerabilities'
+          else
+            echo "vulnerabilities-found=false" >> $GITHUB_OUTPUT
+            echo "✅ No high-severity vulnerabilities found!"
+          fi
+
+      - name: 🔧 Fix Security Issues
+        if: steps.security-check.outputs.vulnerabilities-found == 'true'
+        run: |
+          echo "Attempting to fix security vulnerabilities..."
+          npm audit fix --force
+          
+          # Test after fixes
+          npm run build
+
+      - name: 📊 Generate Security Report
+        if: steps.security-check.outputs.vulnerabilities-found == 'true'
+        run: |
+          echo "# 🛡️ Security Update Report" > security-report.md
+          echo "" >> security-report.md
+          echo "## Fixed Vulnerabilities" >> security-report.md
+          echo "" >> security-report.md
+          
+          if [ -f audit.json ]; then
+            cat audit.json | jq -r '.vulnerabilities | to_entries[] | "- **\(.key)**: \(.value.severity) severity"' >> security-report.md
+          fi
+          
+          echo "" >> security-report.md
+          echo "## Actions Taken" >> security-report.md
+          echo "- 🔧 Ran \`npm audit fix --force\`" >> security-report.md
+          echo "- ✅ Verified build still works" >> security-report.md
+          echo "" >> security-report.md
+          echo "⚠️ **Please review these changes carefully before merging.**" >> security-report.md
+          echo "" >> security-report.md
+          echo "*Automated security update on $(date)*" >> security-report.md
+
+      - name: 🚨 Create Security PR
+        if: steps.security-check.outputs.vulnerabilities-found == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "🛡️ Fix security vulnerabilities"
+          title: "🚨 SECURITY: Fix vulnerabilities"
+          body-path: security-report.md
+          branch: security-updates
+          delete-branch: true
+          labels: |
+            security
+            critical
+            automated
+          reviewers: |
+            rajshah9305

@@ -1,5 +1,12 @@
 # 🧠 Cerebras Studio
 
+[![CI/CD Pipeline](https://github.com/rajshah9305/CereStudioAI/actions/workflows/deploy.yml/badge.svg)](https://github.com/rajshah9305/CereStudioAI/actions/workflows/deploy.yml)
+[![Deployment](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat&logo=vercel)](https://cerestudioai.vercel.app)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat&logo=next.js)
+![React](https://img.shields.io/badge/React-18-blue?style=flat&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript)
+
 > **AI-Powered Creative Platform with Ultra-Fast Inference**
 
 Experience the world's fastest AI content generation with Cerebras Studio - a premium creative platform powered by Cerebras Wafer-Scale Engine technology, delivering up to 1,800 tokens per second.
@@ -99,16 +106,46 @@ You can also set the API key as an environment variable:
 CEREBRAS_API_KEY=your_api_key_here
 ```
 
-## 🚀 Deployment
+## 🚀 Deployment & CI/CD
 
-### Vercel (Recommended)
+### Automated Deployment Pipeline
+
+This project includes a comprehensive CI/CD pipeline with:
+
+- **🔍 Quality Assurance**: TypeScript, ESLint, Prettier checks
+- **🛡️ Security Scanning**: Dependency vulnerability checks
+- **⚡ Performance Analysis**: Bundle size and build optimization
+- **🚀 Automated Deployment**: Preview for PRs, Production for main branch
+- **📦 Dependency Management**: Automated updates and security fixes
+
+### Quick Deploy
+
+#### Vercel (Recommended)
 ```bash
-vercel
-# Add CEREBRAS_API_KEY to environment variables in Vercel dashboard
+# One-time setup
+vercel login
+vercel link
+
+# Deploy
+npm run deploy:prod
+```
+
+#### Manual Deployment
+```bash
+# Build and deploy
+npm run build
+npm run deploy
+```
+
+### Environment Variables
+Set these in your deployment platform:
+```bash
+CEREBRAS_API_KEY=your_api_key_here
+NEXT_TELEMETRY_DISABLED=1
 ```
 
 ### Other Platforms
-The app works on any platform that supports Next.js:
+Compatible with any Next.js hosting:
 - Netlify
 - Railway
 - Render

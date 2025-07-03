@@ -1,0 +1,211 @@
+name: 🔍 Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Code Quality Checks
+  code-quality:
+    name: 📊 Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🧹 Run Prettier Check
+        run: npx prettier --check .
+
+      - name: 🔍 Run ESLint
+        run: npm run lint
+
+      - name: 📏 Check Bundle Size
+        run: |
+          npm run build
+          npx bundlesize
+
+      - name: 🧪 Run Tests (if available)
+        run: |
+          if [ -f "package.json" ] && grep -q '"test"' package.json; then
+            npm test
+          else
+            echo "No tests found, skipping..."
+          fi
+
+  # Dependency Analysis
+  dependency-check:
+    name: 📦 Dependency Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 Check for Outdated Dependencies
+        run: npm outdated || true
+
+      - name: 📊 Analyze Bundle
+        run: |
+          npm run build
+          echo "Build size analysis:"
+          du -sh .next/static/chunks/* | sort -hr | head -10
+
+  # Performance Checks
+  performance-check:
+    name: ⚡ Performance Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🏗️ Build Project
+        run: npm run build
+
+      - name: ⚡ Analyze Performance
+        run: |
+          echo "📊 Build Performance Metrics:"
+          echo "================================"
+          echo "📁 Total build size:"
+          du -sh .next/
+          echo ""
+          echo "📦 Static assets size:"
+          du -sh .next/static/
+          echo ""
+          echo "🔍 Largest chunks:"
+          find .next/static/chunks -name "*.js" -exec du -h {} + | sort -hr | head -5
+
+  # Security Checks
+  security-analysis:
+    name: 🛡️ Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🛡️ Security Audit
+        run: |
+          echo "🔍 Running security audit..."
+          npm audit --audit-level=moderate
+          
+      - name: 🔒 Check for Secrets
+        run: |
+          echo "🔍 Checking for potential secrets in code..."
+          if grep -r "api[_-]key\|secret\|password\|token" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . | grep -v node_modules | grep -v ".git"; then
+            echo "⚠️ Potential secrets found in code. Please review."
+            exit 1
+          else
+            echo "✅ No obvious secrets found in code."
+          fi
+
+  # PR Summary
+  pr-summary:
+    name: 📋 PR Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, dependency-check, performance-check, security-analysis]
+    if: always()
+    
+    steps:
+      - name: 📋 Generate PR Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobs = [
+              { name: 'Code Quality', result: '${{ needs.code-quality.result }}' },
+              { name: 'Dependency Check', result: '${{ needs.dependency-check.result }}' },
+              { name: 'Performance Check', result: '${{ needs.performance-check.result }}' },
+              { name: 'Security Analysis', result: '${{ needs.security-analysis.result }}' }
+            ];
+            
+            const getEmoji = (result) => {
+              switch(result) {
+                case 'success': return '✅';
+                case 'failure': return '❌';
+                case 'cancelled': return '⏹️';
+                default: return '⏳';
+              }
+            };
+            
+            const summary = jobs.map(job => 
+              `${getEmoji(job.result)} **${job.name}**: ${job.result}`
+            ).join('\n');
+            
+            const commentBody = `## 🔍 Pull Request Analysis Summary
+            
+            ${summary}
+            
+            ---
+            
+            ${jobs.every(job => job.result === 'success') 
+              ? '🎉 All checks passed! This PR is ready for review.' 
+              : '⚠️ Some checks failed. Please review and fix the issues above.'}
+            
+            *Automated analysis completed at ${new Date().toISOString()}*`;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('🔍 Pull Request Analysis Summary')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
